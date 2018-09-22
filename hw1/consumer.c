@@ -3,7 +3,7 @@ CSC139
 Fall 2018
 First Assignment
 Kozak, Ryan
-Section #
+Section #02
 OSs Tested on: Linux
 */
 
