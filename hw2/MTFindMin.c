@@ -29,8 +29,6 @@ void InitSharedVars();
 void GenerateInput(int size, int indexForZero); //Generate the input array 
 void CalculateIndices(int arraySize, int thrdCnt, int indices[MAX_THREADS][3]); //Calculate the indices to divide the array into T divisions, one division per thread
 int GetRand(int min, int max);//Get a random number between min and max
-static void *f(void *p);
-
 
 //Timing functions
 long GetMilliSecondTime(struct timeb timeBuf);
@@ -108,11 +106,16 @@ int main(int argc, char *argv[]){
         }
         
         // Parent checking on children
-        while(gDoneThreadCount < gThreadCount) {
+       volatile int weDone = 0;
+       while(weDone < gThreadCount) {
+            weDone = 0;
             for(int i = 0; i < gThreadCount; i ++){
-                if(gThreadDone[i] && gThreadMin[i] == 0) {
-                    gDoneThreadCount = gThreadCount;
-                    break;    
+                if(gThreadDone[i]) {
+                    if(gThreadMin[i] == 0) {
+		        weDone = gThreadCount;
+                        break;
+                    }
+                    weDone++;
                 }
             }
         }
@@ -127,9 +130,8 @@ int main(int argc, char *argv[]){
 	InitSharedVars();
 
         // Initialize your semaphores here  
-        sem_init(&mutex,0,0);
+        sem_init(&mutex,0,1);
 	sem_init(&completed,0,0);
-       // found = false;
 	SetTime();
 
         // Write your code here
@@ -187,7 +189,6 @@ void* ThFindMin(void *param) {
             gThreadMin[threadNum] = gData[i]; // Set thread min to current index in chunk. 
         }
     }
-    gDoneThreadCount++;
     gThreadDone[threadNum] = true; // Set this thread to done. 
     pthread_exit(NULL); // exit thread.*/
 }
@@ -208,6 +209,9 @@ void* ThFindMinWithSemaphore(void *param) {
         if(gData[i] < 1) {
             gThreadMin[threadNum] = 0; // This thread found the zero.
             sem_post(&completed); // Post the completed.
+            sem_wait(&mutex);
+            gDoneThreadCount = gThreadCount; 
+            sem_post(&mutex); 
             break;
         }
         else if(gData[i] < gThreadMin[threadNum]) {
@@ -219,12 +223,12 @@ void* ThFindMinWithSemaphore(void *param) {
 
     sem_wait(&mutex); // lock critical section
     gDoneThreadCount++; // edit global var.
-    sem_post(&mutex); // post semip
+    //sem_post(&mutex); // post semip
 
     if (gDoneThreadCount == gThreadCount) {
         sem_post(&completed);
     }
-    
+    sem_post(&mutex);   
     pthread_exit(NULL); // exit the thread now.
 
 }
