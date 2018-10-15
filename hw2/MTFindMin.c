@@ -29,7 +29,7 @@ void InitSharedVars();
 void GenerateInput(int size, int indexForZero); //Generate the input array 
 void CalculateIndices(int arraySize, int thrdCnt, int indices[MAX_THREADS][3]); //Calculate the indices to divide the array into T divisions, one division per thread
 int GetRand(int min, int max);//Get a random number between min and max
-
+static void *f(void *p);
 
 
 //Timing functions
@@ -125,17 +125,29 @@ int main(int argc, char *argv[]){
 
 	// Multi-threaded with semaphores  
 	InitSharedVars();
+
         // Initialize your semaphores here  
+        sem_init(&mutex,0,0);
+	sem_init(&completed,0,0);
+       // found = false;
 	SetTime();
 
         // Write your code here
 	// Initialize threads, create threads, and then make the parent wait on the "completed" semaphore 
 	// The thread start function is ThFindMinWithSemaphore
 	// Don't forget to properly initialize shared variables and semaphores using sem_init 
+        for (int i = 0; i < gThreadCount; i++) {
+	    pthread_create(&tid[i], NULL, ThFindMinWithSemaphore, &indices[i]);
+	}
+
+	sem_wait(&completed);	//detect children processes completed
+        
+        for(int i = 0; i < gThreadCount; i++) {
+	    pthread_cancel(tid[i]);
+	}
 	min = SearchThreadMin();
 	printf("Threaded FindMin with parent waiting on a semaphore completed in %ld ms. Min = %d\n", GetTime(), min);
 }
-
 
 
 // Write a regular sequential function to search for the minimum value in the array gData
@@ -188,16 +200,15 @@ void* ThFindMin(void *param) {
 // Don't forget to protect access to gDoneThreadCount with the "mutex" semaphore     
 void* ThFindMinWithSemaphore(void *param) {
    
- /*   int threadNum = ((int*)param)[0]; // Get thread number
-    int start = indices[threadNum-1][1]; // Get start array index for thread.
-    int end = indices[threadNum-1][2]; // Ged end array index for thread.
+    int threadNum = ((int*)param)[0]; // Get thread number
+    int start = ((int*)param)[1]; // Get start array index for thread.
+    int end = ((int*)param)[2]; // Ged end array index for thread.
 
     for(int i = start; i < end; i++) {
         if(gData[i] < 1) {
-            gThreadMin[threadNum] = gData[i]; // This thread found the zero.
-            gThreadDone[threadNum] = true; // Set this thread to done.
+            gThreadMin[threadNum] = 0; // This thread found the zero.
             sem_post(&completed); // Post the completed.
-            pthread_exit(NULL); // exit now.
+            break;
         }
         else if(gData[i] < gThreadMin[threadNum]) {
             gThreadMin[threadNum] = gData[i]; // new smallest...ok
@@ -215,7 +226,7 @@ void* ThFindMinWithSemaphore(void *param) {
     }
     
     pthread_exit(NULL); // exit the thread now.
-*/
+
 }
 
 int SearchThreadMin() {
