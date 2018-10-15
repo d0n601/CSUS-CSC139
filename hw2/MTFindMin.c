@@ -1,3 +1,42 @@
+/*
+ * CSC139 
+ * Fall 2018
+ * Second Assignment
+ * Kozak, Ryan
+ * Section #02
+
+ * OSs Tested on: Linux
+ * 
+ *
+ * Architectures Tested on:
+ *
+ * Athena: Architecture:  i686
+ * CPU op-mode(s):        32-bit, 64-bit
+ * Byte Order:            Little Endian
+ * CPU(s):                4
+ * On-line CPU(s) list:   0-3
+ * Thread(s) per core:    1
+ * Core(s) per socket:    2
+ * Socket(s):             2
+ * Vendor ID:             GenuineIntel
+ * CPU family:            6
+ * Model:                 37
+ * Model name:            Intel(R) Xeon(R) CPU E5-2640 0 @ 2.50GHz
+ * Stepping:              1
+ * CPU MHz:               2500.000
+ * BogoMIPS:              5000.00
+ * Hypervisor vendor:     VMware
+ * Virtualization type:   full
+ * L1d cache:             32K
+ * L1i cache:             32K
+ * L2 cache:              256K
+ * L3 cache:              15360K
+ *
+
+ * */
+
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -106,14 +145,16 @@ int main(int argc, char *argv[]){
         }
         
         // Parent checking on children
-       volatile int weDone = 0;
+       volatile int weDone = 0; // We need a non critical variable to track finished children.
+
+       // Loop until all the children are done, or one finds a zero.
        while(weDone < gThreadCount) {
-            weDone = 0;
-            for(int i = 0; i < gThreadCount; i ++){
+            weDone = 0; // If we don'e reset this, one child finished will keep bumping it.
+            for(int i = 0; i < gThreadCount; i ++) {
                 if(gThreadDone[i]) {
                     if(gThreadMin[i] == 0) {
-		        weDone = gThreadCount;
-                        break;
+		        weDone = gThreadCount; // This breaks the loop constantly rechecking all children.
+                        break; // Break inner child checking loop.
                     }
                     weDone++;
                 }
@@ -209,9 +250,6 @@ void* ThFindMinWithSemaphore(void *param) {
         if(gData[i] < 1) {
             gThreadMin[threadNum] = 0; // This thread found the zero.
             sem_post(&completed); // Post the completed.
-            sem_wait(&mutex);
-            gDoneThreadCount = gThreadCount; 
-            sem_post(&mutex); 
             break;
         }
         else if(gData[i] < gThreadMin[threadNum]) {
@@ -222,13 +260,16 @@ void* ThFindMinWithSemaphore(void *param) {
     gThreadDone[threadNum] = true; // Set this thread to done.
 
     sem_wait(&mutex); // lock critical section
+    
     gDoneThreadCount++; // edit global var.
-    //sem_post(&mutex); // post semip
-
+    
+    /* Check global var in critical section while it's locked */
     if (gDoneThreadCount == gThreadCount) {
-        sem_post(&completed);
+        sem_post(&completed); // post complete if we're the last thread done.
     }
-    sem_post(&mutex);   
+    
+    sem_post(&mutex);  // Unlock the critical section.
+    
     pthread_exit(NULL); // exit the thread now.
 
 }
@@ -270,19 +311,19 @@ void GenerateInput(int size, int indexForZero) {
 // For each division i, indices[i][0] should be set to the division number i,
 // indices[i][1] should be set to the start index, and indices[i][2] should be set to the end index 
 void CalculateIndices(int arraySize, int thrdCnt, int indices[MAX_THREADS][3]) {
+    
     int d = arraySize/thrdCnt; 
     int start = 0;
     int end = d - 1;
-    printf("arraySize=%d   thrdCnt=%d   d=%d\n",arraySize, thrdCnt, d);
-    for (int i = 0; i < thrdCnt; i++) {
+   
+     for (int i = 0; i < thrdCnt; i++) {
 	indices[i][0] = i;
 	indices[i][1] = start;
 	indices[i][2] = end; 
-        //printf("Indices %i start: %i end: %i\n", i, start, end);
         start += d; //bump start index
         end += d; // bump end index.
     }
-	
+
 }
 
 // Get a random number in the range [x, y]
