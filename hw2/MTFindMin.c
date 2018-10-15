@@ -17,7 +17,6 @@ int gThreadCount; //Number of threads
 int gDoneThreadCount; //Number of threads that are done at a certain point. Whenever a thread is done, it increments this. Used with the semaphore-based solution
 int gThreadMin[MAX_THREADS]; //The minimum value found by each thread
 bool gThreadDone[MAX_THREADS]; //Is this thread done? Used when the parent is continually checking on child threads
-
 // Semaphores
 sem_t completed; //To notify parent that all threads have completed or one of them found a zero
 sem_t mutex; //Binary semaphore to protect the shared variable gDoneThreadCount
@@ -31,7 +30,7 @@ void GenerateInput(int size, int indexForZero); //Generate the input array
 void CalculateIndices(int arraySize, int thrdCnt, int indices[MAX_THREADS][3]); //Calculate the indices to divide the array into T divisions, one division per thread
 int GetRand(int min, int max);//Get a random number between min and max
 
-void *PatientParent(void *p);
+
 
 //Timing functions
 long GetMilliSecondTime(struct timeb timeBuf);
@@ -85,7 +84,7 @@ int main(int argc, char *argv[]){
 	// The thread start function is ThFindMin
 	// Don't forget to properly initialize shared variables 
        for (int i = 0; i < gThreadCount; i++) {
-            pthread_create(&tid[i], NULL, ThFindMin, &indices[i]);//new int(i));
+            pthread_create(&tid[i], NULL, ThFindMin, &indices[i]);
         }
         // Now the main thread waits for all the children to finish.
 	for (int i = 0; i < gThreadCount; i++) {
@@ -103,6 +102,23 @@ int main(int argc, char *argv[]){
 	// Initialize threads, create threads, and then make the parent continually check on all child threads
 	// The thread start function is ThFindMin
 	// Don't forget to properly initialize shared variables 
+        
+	for(int i = 0; i < gThreadCount; i++) {
+            pthread_create(&tid[i], NULL, ThFindMin, &indices[i]);
+        }
+        
+        // Parent checking on children
+        while(gDoneThreadCount < gThreadCount) {
+            for(int i = 0; i < gThreadCount; i ++){
+                if(gThreadDone[i] && gThreadMin[i] == 0) {
+                    gDoneThreadCount = gThreadCount;
+                    break;    
+                }
+            }
+        }
+        for(int i = 0; i < gThreadCount; i++) {
+            pthread_cancel(tid[i]);
+        } 
         min = SearchThreadMin();
 	printf("Threaded FindMin with parent continually checking on children completed in %ld ms. Min = %d\n", GetTime(), min);
 	
@@ -121,14 +137,6 @@ int main(int argc, char *argv[]){
 }
 
 
-
-
-
-/* Parent wait for all children to finish */
-void *PatientParent(void *p) {
-    while(gDoneThreadCount < gThreadCount) {}
-    return NULL;
-}
 
 // Write a regular sequential function to search for the minimum value in the array gData
 int SqFindMin(int size) {
