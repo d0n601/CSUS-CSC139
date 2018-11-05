@@ -14,7 +14,7 @@
 #include <stdint.h>
 
 #define P_MAX 2000
-#define INPUT_FILE "./tests/input16.txt"
+#define INPUT_FILE "./tests/input15.txt"
 
 // Global Variables
 int currp = -1;
@@ -50,7 +50,7 @@ void SortProcesses(int s); // Sort process lines.
 int LinearSearch(int element, int const* array, int s, int e); // Search the queue for an element.
 
 
-int main() {
+int main(int argc, char *argv[]) {
     ParseInput(); // Scan the input file, setup vars, call algorithm.
     return 0;
 }
@@ -252,8 +252,7 @@ void ParseInput() {
         exit(1);
     }
     fclose(fp);
-
-    printf("\n");
+    exit(0);
 }
 
 // Calculate the average wait time.
