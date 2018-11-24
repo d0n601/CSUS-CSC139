@@ -6,6 +6,11 @@
  * Section #02
  * OSs Tested on: Linux
  *
+ * Compile with: gcc -std=c99 -Wall ./CPUScheduler.c
+ *
+ * Expects an input.txt to be in the same directory
+ * Outputs an output.txt in the same directory
+ *
 */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -14,7 +19,8 @@
 #include <stdint.h>
 
 #define P_MAX 2000
-#define INPUT_FILE "./tests/input15.txt"
+#define INPUT_FILE "./input.txt"
+#define OUTPUT_FILE "./output.txt"
 
 // Global Variables
 int currp = -1;
@@ -25,8 +31,8 @@ int pc = 0;
 int queue_size = 0;
 
 // Process number [0][y] Arrival Time [1][y], CPU burst time [2][y], Priority [3][y]
-int process[4][P_MAX] = {-1};
-int finished[3][P_MAX] = {0}; // This is to calculate AVG wait time more easily
+int process[4][P_MAX] = {{-1,-1},{-1,-1}};
+int finished[3][P_MAX] = {{0,0},{0,0}}; // This is to calculate AVG wait time more easily
 
 char * p; // Character representation of pc.
 char * alg; // Scheduling algorithm to use
@@ -59,14 +65,17 @@ int main(int argc, char *argv[]) {
 // Round Robin
 void RoundRobin() {
 
+	FILE *op = fopen(OUTPUT_FILE, "w"); // Open the output file.
+
     quantum = (int)alg[3] - 48; // Time quantum.
     completed = 0;
     HandleArrivals(-1); // Input new processes into queue.
-    printf("RR\n");
+    fprintf(op, "RR %i\n", quantum); // Algorithm in first line of output file.
+
 
     while(completed < pc) {
         currp = Remove(); // Get process from stack.
-        printf("%i %i \n", clock, currp); // Print the current clock time, and process number
+        fprintf(op, "%i %i \n", clock, currp); // Print the current clock time, and process number
 
         int b = GetBurst(currp); // Get the burst of the process
 
@@ -93,22 +102,24 @@ void RoundRobin() {
         }
 
     }
-    printf("AVG Waiting Time: %0.2f\n", CalcWait());
+    fprintf(op, "AVG Waiting Time: %0.2f\n", CalcWait());
+    fclose(op);
 }
 
 // Shortest Job First
 void ShortestJobFirst() {
 
+	FILE *op = fopen(OUTPUT_FILE, "w"); // Open the output file.
     SortProcesses(2); // Sort processes by shortest burst time
     completed = 0; // Set completed processes to zero.
     HandleArrivals(-1); // Input new processes into queue.
 
-    printf("SJF\n"); // Output Line 1:
+    fprintf(op, "SJF\n"); // Output Line 1:
 
     while(completed < pc) {
 
         currp = Remove(); // Get process from stack.
-        printf("%i %i \n", clock, currp); // Print the current clock time, and process number
+        fprintf(op, "%i %i \n", clock, currp); // Print the current clock time, and process number
 
         if(currp > 0) {
             int b = GetBurst(currp); // Get the burst of the process
@@ -127,21 +138,24 @@ void ShortestJobFirst() {
         }
 
     }
-    printf("AVG Waiting Time: %0.2f\n", CalcWait()); // Last Line of output
+    fprintf(op, "AVG Waiting Time: %0.2f\n", CalcWait()); // Last Line of output
+    fclose(op);
 }
 
 // Priority Scheduling without Preemption (PR_noPREMP)
 void PR_noPremp() {
 
+	FILE *op = fopen(OUTPUT_FILE, "w"); // Open the output file.
+
     SortProcesses(3); // Sort processes by priority (lower number =  higher priority).
     completed = 0;
     HandleArrivals(-1); // Input new processes into queue.
-    printf("PR_noPREMP\n");
+    fprintf(op, "PR_noPREMP\n");
 
     while(completed < pc) {
 
         currp = Remove(); // Get process from stack.
-        printf("%i %i \n", clock, currp); // Print the current clock time, and process number.
+        fprintf(op, "%i %i \n", clock, currp); // Print the current clock time, and process number.
 
         if(currp > 0) {
             int b = GetBurst(currp); // Get the burst of the process.
@@ -159,16 +173,19 @@ void PR_noPremp() {
             HandleArrivals(currp); // Handle processes that arrived just now.
         }
     }
-    printf("AVG Waiting Time: %0.2f\n", CalcWait());
+    fprintf(op, "AVG Waiting Time: %0.2f\n", CalcWait());
+    fclose(op);
 }
 
 // Priority Scheduling with Preemption (PR_withPREMP)
 void PR_withPremp() {
 
+	FILE *op = fopen(OUTPUT_FILE, "w"); // Open the output file.
+
     SortProcesses(3); // Sort processes by priority (lower number =  higher priority).
     completed = 0;
     HandleArrivals(-1); // Input new processes into queue.
-    printf("PR_withPREMP\n");
+    fprintf(op,"PR_withPREMP\n");
 
 
     while(completed < pc) {
@@ -178,7 +195,7 @@ void PR_withPremp() {
         currp = Remove(); // Get process from stack.
 
         if(currp != lastp) {
-            printf("%i %i \n", clock, currp); // Print the current clock time, and process number.
+            fprintf(op, "%i %i \n", clock, currp); // Print the current clock time, and process number.
         }
 
         clock ++;
@@ -198,7 +215,8 @@ void PR_withPremp() {
         ClearQueue();
         HandleArrivals(-1); // Handle processes that arrived just now.
     }
-    printf("AVG Waiting Time: %0.2f\n", CalcWait());
+    fprintf(op, "AVG Waiting Time: %0.2f\n", CalcWait());
+    fclose(op);
 }
 
 // Parse the Input File.
@@ -327,25 +345,11 @@ void SortProcesses(int s){
             }
         }
     }
-    if(s == 2) {
+    if(s == 2 || s == 3) {
         // Break ties in burst length by arrival time.
         for (int i = 0; i < pc; ++i) {
             for (int j = i + 1; j < pc; ++j) {
-                if ((process[2][i] == process[2][j]) && (process[1][i] >= process[1][j])) {
-                    for (int cnt = 0; cnt < 4; cnt++) {
-                        int temp = process[cnt][i];
-                        process[cnt][i] = process[cnt][j];
-                        process[cnt][j] = temp;
-                    }
-                }
-            }
-        }
-    }
-    if(s == 3) {
-        // Break ties in burst length by arrival time.
-        for (int i = 0; i < pc; ++i) {
-            for (int j = i + 1; j < pc; ++j) {
-                if ((process[3][i] == process[3][j]) && (process[1][i] >= process[1][j])) {
+                if ((process[s][i] == process[s][j]) && (process[s][i] >= process[s][j])) {
                     for (int cnt = 0; cnt < 4; cnt++) {
                         int temp = process[cnt][i];
                         process[cnt][i] = process[cnt][j];

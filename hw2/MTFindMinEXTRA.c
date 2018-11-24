@@ -1,38 +1,14 @@
 /*
  * CSC139 
  * Fall 2018
- * Second Assignment
+ * Second Assignment EXTRA CREDIT!
  * Kozak, Ryan
  * Section #02
 
  * OSs Tested on: Linux
  * 
  *
- * Architectures Tested on: For written work
-
- * Architecture:          x86_64
- * CPU op­mode(s):        32­bit, 64­bit
- * Byte Order:            Little Endian
- * CPU(s):                8
- * On­line CPU(s) list:   0­7
- * Thread(s) per core:    2
- * Core(s) per socket:    4
- * Socket(s):             1
- * NUMA node(s):          1
- * Vendor ID:             GenuineIntel
- * CPU family:            6
- * Model:                 26
- * Stepping:              5
- * CPU MHz:               1596.000
- * BogoMIPS:              5333.27
- * Virtualization:        VT­x
- * L1d cache:             32K
- * L1i cache:             32K
- * L2 cache:              256K
- * L3 cache:              8192K
- * NUMA node0 CPU(s):     0­7 
-
- * Also tested on Athena: To check functionality in CSUS env.
+ * Architectures Tested on:
  *
  * Athena: Architecture:  i686
  * CPU op-mode(s):        32-bit, 64-bit
@@ -73,24 +49,27 @@
 #define MAX_RANDOM_NUMBER 5000
 
 // Global variables
+void* gShmPtr;
 long gRefTime; //For timing
 int gData[MAX_SIZE]; //The array that will hold the data
-int indices[MAX_THREADS][3]; /* I set this, not in original template */
-int gThreadCount; //Number of threads
-int gDoneThreadCount; //Number of threads that are done at a certain point. Whenever a thread is done, it increments this. Used with the semaphore-based solution
-int gThreadMin[MAX_THREADS]; //The minimum value found by each thread
-bool gThreadDone[MAX_THREADS]; //Is this thread done? Used when the parent is continually checking on child threads
+int indices[MAX_PROCESSES][3]; /* I set this, not in original template */
+int gProcessCount; //Number of processes
+int gDoneProcessCount; //Number of processes that are done at a certain point. Whenever a process is done, it increments this. Used with the semaphore-based solution
+int gProcessMin[MAX_PROCESSES]; //The minimum value found by each thread
+bool gProcessDone[MAX_PROCESSES]; //Is this Process done? Used when the parent is continually checking on child threads
 // Semaphores
-sem_t completed; //To notify parent that all threads have completed or one of them found a zero
-sem_t mutex; //Binary semaphore to protect the shared variable gDoneThreadCount
+sem_t completed; //To notify parent that all processes have completed or one of them found a zero
+sem_t mutex; //Binary semaphore to protect the shared variable gDoneProcessCount
 
+void InitShm(int, int);
 int SqFindMin(int size); //Sequential FindMin (no threads)
-void *ThFindMin(void *param); //Thread FindMin but without semaphores 
-void *ThFindMinWithSemaphore(void *param); //Thread FindMin with semaphores 
-int SearchThreadMin(); // Search all thread minima to find the minimum value found in all threads 
+void *ThFindMin(void *param); //Process FindMin but without semaphores 
+void *ThFindMinWithSemaphore(void *param); //Process FindMin with semaphores 
+int SearchpRrocessMin(); // Search all process minima to find the minimum value found in all processes
+void InitShm(int, int); 
 void InitSharedVars();
-void GenerateInput(int size, int indexForZero); //Generate the input array 
-void CalculateIndices(int arraySize, int thrdCnt, int indices[MAX_THREADS][3]); //Calculate the indices to divide the array into T divisions, one division per thread
+void GenerateInput(int size, int indexForZero); //Generate the input array
+void CalculateIndices(int arraySize, int prsCnt, int indices[MAX_PROCESSES[3]); //Calculate the indices to divide the array into T divisions, one division per process
 int GetRand(int min, int max);//Get a random number between min and max
 
 //Timing functions
@@ -101,8 +80,8 @@ long GetTime(void);
 
 int main(int argc, char *argv[]){
 
-	pthread_t tid[MAX_THREADS];  
-	pthread_attr_t attr[MAX_THREADS];
+	pid_t pid[MAX_THREADS];  
+	//pthread_attr_t attr[MAX_THREADS];
 	int indices[MAX_THREADS][3];
 	int i, indexForZero, arraySize, min;
 
@@ -127,7 +106,6 @@ int main(int argc, char *argv[]){
 	}
 
 	GenerateInput(arraySize, indexForZero);
-
 	CalculateIndices(arraySize, gThreadCount, indices); 
 
 	// Code for the sequential part
@@ -152,46 +130,46 @@ int main(int argc, char *argv[]){
             pthread_join(tid[i], NULL);
 	}
         min = SearchThreadMin();
-	printf("Threaded FindMin with parent waiting for all children completed in %ld ms. Min = %d\n", GetTime(), min);
+	printf("Multiprocess FindMin with parent waiting for all children completed in %ld ms. Min = %d\n", GetTime(), min);
 
-	// Multi-threaded with busy waiting (parent continually checking on child threads without using semaphores)
+	// Multi-process with busy waiting (parent continually checking on child processes without using semaphores)
 	InitSharedVars();
 	SetTime();
 
 	// Write your code here
         // Don't use any semaphores in this part	
-	// Initialize threads, create threads, and then make the parent continually check on all child threads
+	// Initialize processes, create processess, and then make the parent continually check on all child processes
 	// The thread start function is ThFindMin
 	// Don't forget to properly initialize shared variables 
         
-	for(int i = 0; i < gThreadCount; i++) {
-            pthread_create(&tid[i], NULL, ThFindMin, &indices[i]);
+	for(int i = 0; i < gProcessCount; i++) {
+          //  pthread_create(&tid[i], NULL, ThFindMin, &indices[i]);
         }
         
         // Parent checking on children
        volatile int weDone = 0; // We need a non critical variable to track finished children.
 
        // Loop until all the children are done, or one finds a zero.
-       while(weDone < gThreadCount) {
+       while(weDone < gProcessCount) {
             weDone = 0; // If we don'e reset this, one child finished will keep bumping it.
-            for(int i = 0; i < gThreadCount; i ++) {
-                if(gThreadDone[i]) {
-                    if(gThreadMin[i] == 0) {
-		        weDone = gThreadCount; // This breaks the loop constantly rechecking all children.
+            for(int i = 0; i < gProcessCount; i ++) {
+                if(gProcessDone[i]) {
+                    if(gProcessMin[i] == 0) {
+		        weDone = gProcessCount; // This breaks the loop constantly rechecking all children.
                         break; // Break inner child checking loop.
                     }
                     weDone++;
                 }
             }
         }
-        for(int i = 0; i < gThreadCount; i++) {
+        for(int i = 0; i < gProcessCount; i++) {
             pthread_cancel(tid[i]);
         } 
-        min = SearchThreadMin();
-	printf("Threaded FindMin with parent continually checking on children completed in %ld ms. Min = %d\n", GetTime(), min);
+        min = SearchProcessMin();
+	printf("Multiprocess FindMin with parent continually checking on children completed in %ld ms. Min = %d\n", GetTime(), min);
 	
 
-	// Multi-threaded with semaphores  
+	// Multi-process with semaphores  
 	InitSharedVars();
 
         // Initialize your semaphores here  
@@ -200,10 +178,10 @@ int main(int argc, char *argv[]){
 	SetTime();
 
         // Write your code here
-	// Initialize threads, create threads, and then make the parent wait on the "completed" semaphore 
-	// The thread start function is ThFindMinWithSemaphore
+	// Initialize threads, create processes, and then make the parent wait on the "completed" semaphore 
+	// The process start function is ThFindMinWithSemaphore
 	// Don't forget to properly initialize shared variables and semaphores using sem_init 
-        for (int i = 0; i < gThreadCount; i++) {
+        for (int i = 0; i < gProcessCount; i++) {
 	    pthread_create(&tid[i], NULL, ThFindMinWithSemaphore, &indices[i]);
 	}
 
@@ -237,25 +215,25 @@ int SqFindMin(int size) {
     return min; // Return the smallest element.
 }
 
-// Write a thread function that searches for the minimum value in one division of the array
-// When it is done, this function should put the minimum in gThreadMin[threadNum] and set gThreadDone[threadNum] to true    
+// Write a process function that searches for the minimum value in one division of the array
+// When it is done, this function should put the minimum in gProcessMin[processNum] and set gProcessDone[processNum] to true    
 void* ThFindMin(void *param) {
 
-    int threadNum = ((int*)param)[0];
+    int processNum = ((int*)param)[0];
     int start = ((int*)param)[1];   
     int end = ((int*)param)[2];   // Get end array index for thread.
 
     for(int i = start; i < end; i++) {
         if(gData[i] < 1) {
-	    gThreadMin[threadNum] = 0; // This thread found the zero.
+	    gProcessMin[processNum] = 0; // This process found the zero.
             break;
         }
-        else if(gData[i] < gThreadMin[threadNum]) {
-            gThreadMin[threadNum] = gData[i]; // Set thread min to current index in chunk. 
+        else if(gData[i] < gProcessMin[processNum]) {
+            gProcessMin[processNum] = gData[i]; // Set process min to current index in chunk. 
         }
     }
-    gThreadDone[threadNum] = true; // Set this thread to done. 
-    pthread_exit(NULL); // exit thread.*/
+    gProcessDone[processdNum] = true; // Set this process to done. 
+    pthread_exit(NULL); // exit process.*/
 }
 
 // Write a thread function that searches for the minimum value in one division of the array
@@ -266,29 +244,29 @@ void* ThFindMin(void *param) {
 // Don't forget to protect access to gDoneThreadCount with the "mutex" semaphore     
 void* ThFindMinWithSemaphore(void *param) {
    
-    int threadNum = ((int*)param)[0]; // Get thread number
+    int processNum = ((int*)param)[0]; // Get thread number
     int start = ((int*)param)[1]; // Get start array index for thread.
     int end = ((int*)param)[2]; // Ged end array index for thread.
 
     for(int i = start; i < end; i++) {
         if(gData[i] < 1) {
-            gThreadMin[threadNum] = 0; // This thread found the zero.
+            gProcessMin[processNum] = 0; // This process found the zero.
             sem_post(&completed); // Post the completed.
             break;
         }
-        else if(gData[i] < gThreadMin[threadNum]) {
-            gThreadMin[threadNum] = gData[i]; // new smallest...ok
+        else if(gData[i] < gProcessMin[processNum]) {
+            gProcessMin[threadNum] = gData[i]; // new smallest...ok
         }
     }    
  
-    gThreadDone[threadNum] = true; // Set this thread to done.
+    gProcessDone[threadNum] = true; // Set this thread to done.
 
     sem_wait(&mutex); // lock critical section
     
-    gDoneThreadCount++; // edit global var.
+    gDoneProcessCount++; // edit global var.
     
     /* Check global var in critical section while it's locked */
-    if (gDoneThreadCount == gThreadCount) {
+    if (gDoneProcessCount == gProcessCount) {
         sem_post(&completed); // post complete if we're the last thread done.
     }
     
@@ -298,24 +276,24 @@ void* ThFindMinWithSemaphore(void *param) {
 
 }
 
-int SearchThreadMin() {
+int SearchProcessMin() {
     int i, min = MAX_RANDOM_NUMBER + 1;
-    for(i =0; i<gThreadCount; i++) {
-        if(gThreadMin[i] == 0)
+    for(i =0; i<gProcessCount; i++) {
+        if(gProcessMin[i] == 0)
             return 0;
-	if(gThreadDone[i] == true && gThreadMin[i] < min)
-	    min = gThreadMin[i];
+	if(gProcessDone[i] == true && gProcessMin[i] < min)
+	    min = gProcessMin[i];
     }
     return min;
 }
 
 void InitSharedVars() {
     int i;
-    for(i=0; i < gThreadCount; i++) {
-        gThreadDone[i] = false;	
-        gThreadMin[i] = MAX_RANDOM_NUMBER + 1;	
+    for(i=0; i < gProcessCount; i++) {
+        gProcessDone[i] = false;	
+        gProcessMin[i] = MAX_RANDOM_NUMBER + 1;	
     }
-    gDoneThreadCount = 0;
+    gDoneProcessCount = 0;
 }
 
 // Write a function that fills the gData array with random numbers between 1 and MAX_RANDOM_NUMBER
@@ -334,13 +312,13 @@ void GenerateInput(int size, int indexForZero) {
 // Write a function that calculates the right indices to divide the array into thrdCnt equal divisions
 // For each division i, indices[i][0] should be set to the division number i,
 // indices[i][1] should be set to the start index, and indices[i][2] should be set to the end index 
-void CalculateIndices(int arraySize, int thrdCnt, int indices[MAX_THREADS][3]) {
+void CalculateIndices(int arraySize, int prsCnt, int indices[MAX_PROCESSES][3]) {
     
-    int d = arraySize/thrdCnt; 
+    int d = arraySize/prsCnt; 
     int start = 0;
     int end = d - 1;
    
-     for (int i = 0; i < thrdCnt; i++) {
+     for (int i = 0; i < prsCnt; i++) {
 	indices[i][0] = i;
 	indices[i][1] = start;
 	indices[i][2] = end; 
@@ -350,8 +328,46 @@ void CalculateIndices(int arraySize, int thrdCnt, int indices[MAX_THREADS][3]) {
 
 }
 
-// Get a random number in the range [x, y]
-int GetRand(int x, int y) {
+
+InitShm(int prsSize, int itemCnt)
+{
+    int in = 0;
+    int out = 0;
+
+    const char *name = "OS_HW2ec_ryanKozak"; // Name of shared memory object to be passed to shm_open
+
+    int shm_fd = shm_open(name, O_CREAT | O_RDWR, 0666); // Shared memory.
+
+    // Check to ensure shared memory was created alright.
+    if(shm_fd < 0) {
+        printf("Error: Problem initilizing shared memory object.\n");
+	exit(1);
+    }
+
+    // Truncate memory to 4k, and make sure that's successful.
+    if(ftruncate(shm_fd, SHM_SIZE) < 0) { // Truncate memory object to 4k.
+        printf("Error: Failed to truncate memory object.\n");
+	exit(1);
+    }
+    // Get pointer to shared memory.
+
+    gShmPtr =  mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0); 
+
+		                                                                     			                                                                            if(gShmPtr < 0 ) {																					printf("Error: Failed to map virtual address space.\n");
+	 exit(1);																				    }
+//																						    SetIn(in);
+    //SetOut(out);
+//    SetBufSize(bufSize);
+  //  SetItemCnt(itemCnt); 	
+}
+
+void SetHeaderVal(int i, int val)
+{
+    void* ptr = gShmPtr + i*sizeof(int);
+    memcpy(ptr, &val, sizeof(int));
+}
+int GetRand(int x, int y)
+{
     int r = rand();
     r = x + r % (y-x+1);
     return r;
