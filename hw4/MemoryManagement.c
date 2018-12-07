@@ -22,6 +22,9 @@
 
 #define F_MAX 2000
 #define INPUT_FILE "/home/x/Desktop/tests/test5.txt"
+//#define INPUT_FILE "./input.txt"
+//#define OUTPUT_FILE "./output.txt"
+
 
 int l1[3]; // Map: 0 pages, 1 frames, 2 requests
 int rq[F_MAX] = {-1}; // Array of initial page requests.
@@ -43,7 +46,7 @@ void Optimal();
 void LeastRecentlyUsed();
 
 
-
+// Begin!
 int main() {
     ParseInput();
     printf("\n");
@@ -95,14 +98,12 @@ void FirstInFirstOut() {
 
 }
 
-
 // Optimal Policy Algorithm
 void Optimal() {
 
     printf("Optimal\n"); // Print algorithm name.
 
-    int faults = 0; // Page fault count to zero.
-    int something = 0;
+    int faults = 0, fc = 0; // Page fault count to zero.
     int frames[F_MAX] = {-1}; // Frame array for optimal algorithm.
 
     /* Loop all page requests */
@@ -115,11 +116,10 @@ void Optimal() {
         if (frame < 0) {
 
             // If all frames full
-            if(something >= l1[1]) {
+            if(fc >= l1[1]) {
 
                 int q = INT_MAX, ln = INT_MIN, tc = 0;
                 int temp[F_MAX] = {-1}; // Frame array for optimal algorithm.
-
 
                 /* Loop frames */
                 for(int i = 0; i < l1[1]; i++) {
@@ -129,14 +129,66 @@ void Optimal() {
                         q = frames[i];
                         break;
                     }
-                    // FAILING TEST 5, PASSING ALL OTHERS
                     else if(n > ln && LinearSearch(frames[i], temp, 0, l1[2]) < 0) {
                         ln = n;
                         q = frames[i]; // Page in frame.
                         temp[tc] = q; // Set page in temp array.
                         tc++; // Temp counter.
                     }
+                }
+                /* Replace Page */
+                frame = LinearSearch(q, frames ,0, l1[1]);
+                printf("Page %i unloaded from Frame %i, ", q, frame); // Output that this happened.
+                frames[frame] = rq[c]; // Insert the page into the queue.
+                printf("Page %i loaded into Frame %i\n", rq[c], frame); // Output that this happened.
+                fc--; // Reduce frame count.
+            }
+            else {
+                frames[fc] = rq[c]; // Insert the page into the queue.
+                printf("Page %i loaded into Frame %i\n", rq[c], fc); // Output that this happened.
+            }
+            faults++; // Increase page fault count.
+            fc++; // Bump frame count.
+        }
+        else {
+            printf("Page %i already in Frame %i\n", rq[c], frame); // Output that page is in the frame, no fault.
+        }
+    }
+    printf("%i page faults\n", faults); // Output page fault fount.
+}
 
+// Least Recently Used Algorithm
+void LeastRecentlyUsed() {
+
+    printf("LRU\n");
+
+    int faults = 0, fc = 0; // Page fault count to zero.
+    int frames[F_MAX] = {-1}; // Frame array for optimal algorithm.
+
+    /* Loop all page requests */
+    for(int c = 0; c < l1[2]; c++) {
+        // Find the requested page in the frames
+        int frame = LinearSearch(rq[c], frames, 0, l1[1]);
+
+        // If the page is not in a frame.
+        if (frame < 0) {
+            // If all frames full
+            if(fc >= l1[1]) {
+
+                int q = INT_MAX, tc = 0;
+                int t0[F_MAX] = {-1}; // Frame array for optimal algorithm.
+
+                // Loop page requests backwards from this point
+                for(int o = c-1; o >= 0; o--) {
+                    // Loop frames
+                    for(int i = 0; i < l1[1]; i++) {
+                        // If page in frame is page previously requested, and not already seen
+                        if(frames[i] == rq[o] && LinearSearch(frames[i], t0, 0, F_MAX) == -1) {
+                            q = frames[i]; // Set frame to remove to this frame.
+                            t0[tc] = q; // Place request in seen requests.
+                            tc++; // increment temp counter
+                        }
+                    }
                 }
 
                 /* Replace Page */
@@ -144,32 +196,21 @@ void Optimal() {
                 printf("Page %i unloaded from Frame %i, ", q, frame); // Output that this happened.
                 frames[frame] = rq[c]; // Insert the page into the queue.
                 printf("Page %i loaded into Frame %i\n", rq[c], frame); // Output that this happened.
-                something--;
+                fc--; // Reduce frame count.
             }
             else {
-                frames[something] = rq[c]; // Insert the page into the queue.
-                printf("Page %i loaded into Frame %i\n", rq[c], something); // Output that this happened.
+                frames[fc] = rq[c]; // Insert the page into the queue.
+                printf("Page %i loaded into Frame %i\n", rq[c], fc); // Output that this happened.
             }
-
             faults++; // Increase page fault count.
-            something++;
-
+            fc++; // Bump frame count.
         }
         else {
             printf("Page %i already in Frame %i\n", rq[c], frame); // Output that page is in the frame, no fault.
         }
     }
-
     printf("%i page faults\n", faults); // Output page fault fount.
-
 }
-
-
-// Least Recently Used Algorithm
-void LeastRecentlyUsed() {
-    printf("LRU\n");
-}
-
 
 // Parse the Input File.
 void ParseInput() {
@@ -200,7 +241,6 @@ void ParseInput() {
     fclose(fp);
 }
 
-
 // Insert page id into FIFO Queue.
 int Insert(int p) {
     if(!Full()) {
@@ -221,12 +261,10 @@ int Remove() {
     return queue[front++];
 }
 
-
 // Returns element next in queue.
 int Peek() {
     return queue[front];
 }
-
 
 // Returns 1 if queue is full, 0 if not
 int Full() {
