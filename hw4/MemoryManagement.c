@@ -12,6 +12,7 @@
  * Outputs an output.txt in the same directory
  *
 */
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,12 +21,13 @@
 #include <limits.h>
 
 #define F_MAX 2000
-#define INPUT_FILE "./input.txt"
+#define INPUT_FILE "/home/x/Desktop/tests/test1.txt"
+//#define INPUT_FILE "./input.txt"
 #define OUTPUT_FILE "./output.txt"
 
 
 FILE *op; // Output file pointer
-int l1[3]; // Map: 0 pages, 1 frames, 2 requests
+int l1[3] = {-1}; // Map: 0 pages, 1 frames, 2 requests
 int rq[F_MAX] = {-1}; // Array of initial page requests.
 
 // Variables for FIFO Queue.
@@ -99,6 +101,7 @@ void FirstInFirstOut() {
         }
         else {
             printf("Page %i already in Frame %i\n", rq[c], frame); // Output that page is in the frame, no fault.
+            fprintf(op, "Page %i already in Frame %i\n", rq[c], frame);
         }
     }
     printf("%i page faults\n", faults); // Output page fault fount.
