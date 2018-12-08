@@ -6,13 +6,12 @@
  * Section #02
  * OSs Tested on: Linux
  *
- * Compile with: gcc -std=c99 -Wall ./MemoryManagement.c
+ * Compile on athena.ecs.csus via: gcc -std=c99 -Wall ./MemoryManagement.c
  *
  * Expects an input.txt to be in the same directory
  * Outputs an output.txt in the same directory
  *
 */
-
 #include <stdio.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,11 +20,11 @@
 #include <limits.h>
 
 #define F_MAX 2000
-#define INPUT_FILE "/home/x/Desktop/tests/test5.txt"
-//#define INPUT_FILE "./input.txt"
-//#define OUTPUT_FILE "./output.txt"
+#define INPUT_FILE "./input.txt"
+#define OUTPUT_FILE "./output.txt"
 
 
+FILE *op; // Output file pointer
 int l1[3]; // Map: 0 pages, 1 frames, 2 requests
 int rq[F_MAX] = {-1}; // Array of initial page requests.
 
@@ -48,13 +47,21 @@ void LeastRecentlyUsed();
 
 // Begin!
 int main() {
-    ParseInput();
-    printf("\n");
+
+    op = fopen(OUTPUT_FILE, "w"); // Open the output file.
+
+    ParseInput(); // Parse the input.txt file
+
     FirstInFirstOut();
     printf("\n");
+    fprintf(op, "\n");
     Optimal();
     printf("\n");
+    fprintf(op, "\n");
     LeastRecentlyUsed();
+
+    fclose(op);
+
     return 0;
 }
 
@@ -63,6 +70,7 @@ int main() {
 void FirstInFirstOut() {
 
     printf("FIFO\n"); // Print algorithm name.
+    fprintf(op, "FIFO\n"); // Output algorith name in file.
 
     int faults = 0; // Page fault count to zero.
 
@@ -81,27 +89,27 @@ void FirstInFirstOut() {
                 frame = LinearSearch(tp, queue, front, rear ) % l1[1]; // Gate frame cleared.
                 Remove(); // Remove page from queue.
                 printf("Page %i unloaded from Frame %i, ", tp, frame); // Output that this happened.
+                fprintf(op, "Page %i unloaded from Frame %i, ", tp, frame); // Write results to file.
             }
             Insert(rq[c]); // Insert the page into the queue.
             frame = LinearSearch(rq[c], queue, front, rear ) % l1[1]; // Get the frame we've inserted into.
             printf("Page %i loaded into Frame %i\n", rq[c], frame); // Output that this happened.
+            fprintf(op, "Page %i loaded into Frame %i\n", rq[c], frame); // and to the file blabla...
             faults++; // Increase page fault count.
         }
         else {
             printf("Page %i already in Frame %i\n", rq[c], frame); // Output that page is in the frame, no fault.
         }
     }
-
     printf("%i page faults\n", faults); // Output page fault fount.
-
-
-
+    fprintf(op, "%i page faults\n", faults);
 }
 
 // Optimal Policy Algorithm
 void Optimal() {
 
     printf("Optimal\n"); // Print algorithm name.
+    fprintf(op, "Optimal\n");
 
     int faults = 0, fc = 0; // Page fault count to zero.
     int frames[F_MAX] = {-1}; // Frame array for optimal algorithm.
@@ -139,28 +147,34 @@ void Optimal() {
                 /* Replace Page */
                 frame = LinearSearch(q, frames ,0, l1[1]);
                 printf("Page %i unloaded from Frame %i, ", q, frame); // Output that this happened.
+                fprintf(op, "Page %i unloaded from Frame %i, ", q, frame);
                 frames[frame] = rq[c]; // Insert the page into the queue.
                 printf("Page %i loaded into Frame %i\n", rq[c], frame); // Output that this happened.
+                fprintf(op, "Page %i loaded into Frame %i\n", rq[c], frame);
                 fc--; // Reduce frame count.
             }
             else {
                 frames[fc] = rq[c]; // Insert the page into the queue.
                 printf("Page %i loaded into Frame %i\n", rq[c], fc); // Output that this happened.
+                fprintf(op, "Page %i loaded into Frame %i\n", rq[c], fc);
             }
             faults++; // Increase page fault count.
             fc++; // Bump frame count.
         }
         else {
             printf("Page %i already in Frame %i\n", rq[c], frame); // Output that page is in the frame, no fault.
+            fprintf(op, "Page %i already in Frame %i\n", rq[c], frame);
         }
     }
     printf("%i page faults\n", faults); // Output page fault fount.
+    fprintf(op, "%i page faults\n", faults);
 }
 
 // Least Recently Used Algorithm
 void LeastRecentlyUsed() {
 
     printf("LRU\n");
+    fprintf(op, "LRU\n");
 
     int faults = 0, fc = 0; // Page fault count to zero.
     int frames[F_MAX] = {-1}; // Frame array for optimal algorithm.
@@ -194,22 +208,27 @@ void LeastRecentlyUsed() {
                 /* Replace Page */
                 frame = LinearSearch(q, frames ,0, l1[1]);
                 printf("Page %i unloaded from Frame %i, ", q, frame); // Output that this happened.
+                fprintf(op, "Page %i unloaded from Frame %i, ", q, frame);
                 frames[frame] = rq[c]; // Insert the page into the queue.
                 printf("Page %i loaded into Frame %i\n", rq[c], frame); // Output that this happened.
+                fprintf(op, "Page %i loaded into Frame %i\n", rq[c], frame);
                 fc--; // Reduce frame count.
             }
             else {
                 frames[fc] = rq[c]; // Insert the page into the queue.
                 printf("Page %i loaded into Frame %i\n", rq[c], fc); // Output that this happened.
+                fprintf(op, "Page %i loaded into Frame %i\n", rq[c], fc);
             }
             faults++; // Increase page fault count.
             fc++; // Bump frame count.
         }
         else {
             printf("Page %i already in Frame %i\n", rq[c], frame); // Output that page is in the frame, no fault.
+            fprintf(op, "Page %i already in Frame %i\n", rq[c], frame);
         }
     }
     printf("%i page faults\n", faults); // Output page fault fount.
+    fprintf(op, "%i page faults\n", faults);
 }
 
 // Parse the Input File.
@@ -231,13 +250,11 @@ void ParseInput() {
     for(int c = 0; c < 3; c++) {
         l1[c] = (int)strtol(strtok(tmp," "), &tmp, 10);
     }
-
     // Fill page requests array.
     for(int c = 0; c < l1[2]; c++) {
         getline(&tmp, &len, fp);
         rq[c] = (int)strtol(strtok(tmp," "), &tmp, 10);
     }
-
     fclose(fp);
 }
 
