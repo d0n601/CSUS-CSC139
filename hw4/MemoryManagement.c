@@ -21,8 +21,7 @@
 #include <limits.h>
 
 #define F_MAX 2000
-#define INPUT_FILE "/home/x/Desktop/tests/test1.txt"
-//#define INPUT_FILE "./input.txt"
+#define INPUT_FILE "./input.txt"
 #define OUTPUT_FILE "./output.txt"
 
 
@@ -53,7 +52,8 @@ int main() {
     op = fopen(OUTPUT_FILE, "w"); // Open the output file.
 
     ParseInput(); // Parse the input.txt file
-
+    printf("\n");
+    fprintf(op, "\n");
     FirstInFirstOut();
     printf("\n");
     fprintf(op, "\n");
@@ -129,7 +129,7 @@ void Optimal() {
             // If all frames full
             if(fc >= l1[1]) {
 
-                int q = INT_MAX, ln = INT_MIN, tc = 0;
+                int q = F_MAX, ln = F_MAX*-1, tc = 0;
                 int temp[F_MAX] = {-1}; // Frame array for optimal algorithm.
 
                 /* Loop frames */
@@ -192,7 +192,7 @@ void LeastRecentlyUsed() {
             // If all frames full
             if(fc >= l1[1]) {
 
-                int q = INT_MAX, tc = 0;
+                int q = F_MAX, tc = 0;
                 int t0[F_MAX] = {-1}; // Frame array for optimal algorithm.
 
                 // Loop page requests backwards from this point
