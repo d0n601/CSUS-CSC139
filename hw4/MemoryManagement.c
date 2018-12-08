@@ -4,9 +4,12 @@
  * Fourth Assignment
  * Kozak, Ryan
  * Section #02
+ * 
  * OSs Tested on: Linux
  *
- * Compile on athena.ecs.csus via: gcc -std=c99 -Wall ./MemoryManagement.c
+ * Machines Tested: athena, atoz, sp1, apollo
+ *
+ * Compile via: gcc -std=c99 -Wall ./MemoryManagement.c
  *
  * Expects an input.txt to be in the same directory
  * Outputs an output.txt in the same directory
@@ -200,7 +203,7 @@ void LeastRecentlyUsed() {
                     // Loop frames
                     for(int i = 0; i < l1[1]; i++) {
                         // If page in frame is page previously requested, and not already seen
-                        if(frames[i] == rq[o] && LinearSearch(frames[i], t0, 0, F_MAX) == -1) {
+                        if(frames[i] == rq[o] && LinearSearch(frames[i], t0, 0, c) == -1) {
                             q = frames[i]; // Set frame to remove to this frame.
                             t0[tc] = q; // Place request in seen requests.
                             tc++; // increment temp counter
